@@ -1,0 +1,171 @@
+<?php
+
+/**
+ * @file
+ * Provides flexible, extensible, wiki-style linking of content.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+// require DRUPAL_ROOT . '/' . (drupal_get_path('module', 'freelinking') . '/freelinking.utilities.inc');
+// require DRUPAL_ROOT . '/' . (drupal_get_path('module', 'freelinking') . '/freelinking.forms.inc');
+
+/**
+* Implements hook_help().
+*/
+function freelinking_help($route_name, RouteMatchInterface $route_match) {
+  // @todo re-implement advanced_help_hint.
+  if ($route_name === 'help.page.freelinking') {
+    return '<p>' . t('This module is a filter to turn wiki-style links into HTML links.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function freelinking_theme() {
+  return [
+    'freelink_error' => [
+      'variables' => [
+        'plugin' => NULL,
+        'message' => NULL,
+        'target' => NULL,
+        'attributes' => [],
+      ],
+    ],
+    'freelink' => [
+      'variables' => ['link' => NULL, 'attributes' => NULL],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_freelink_alter().
+ * Used here to clean up and standardize links.
+ */
+/**
+function freelinking_freelink_alter(&$link, $context) {
+  $target = $context['target'];
+  $plugin_name = $context['plugin_name'];
+  $plugin = $context['plugin'];
+
+  // not a valid link
+  if (!array_key_exists(1, $link)) {
+    $link['error'] = t('Invalid Link');
+    return;
+  }
+  // title text is empty, insert from target or use URL
+  if (empty($link[0])) {
+    $link[0] = $target['text'] ? $target['text'] : $target['dest'];
+  }
+
+  // support html link text unless plugin overrides
+  if (isset($plugin['html']) && $plugin['html'] == TRUE) {
+    $link[2]['html'] = TRUE;
+  }
+
+  // Set an empty tooltip
+  if (!isset($link[2]['attributes']['title'])) {
+    if (isset($context['plugin']['tip'])) {
+      $link[2]['attributes']['title'] = $context['plugin']['tip'];
+    }
+    else {
+      $link[2]['attributes']['title'] = $link[1];
+    }
+  }
+
+  // standard set of CSS classes
+  $link[2]['attributes']['class'][] = 'freelink';
+  $link[2]['attributes']['class'][] = 'freelink-' . strtr($plugin_name, ' ', '-');
+
+  // There was more than one effort to generate the link
+  if (isset($target['other']['trace'])) {
+    $link[2]['attributes']['class'][] = 'notfound';
+  }
+
+  // Is this an internal or external link?
+  $parts = parse_url($link[1]);
+  if (isset($parts['host']) && $parts['host'] != $_SERVER['SERVER_NAME']) {
+    $link[2]['attributes']['class'][] = 'freelink-external';
+  }
+  else {
+    $link[2]['attributes']['class'][] = 'freelink-internal';
+  }
+}
+*/
+
+/**
+ * Construct a link out of the $target with the specified plugin
+ *
+ * There are three built-in indicators that will not generate links:
+ * - nowiki: will strip the nowiki-indicator and show the rest;
+ * - showtext: as nowiki, but will also strip double brackets;
+ * - redact: as showtext for logged in users, will redact for anon.
+ */
+/**
+function _freelinking_build_freelink($freelinking, $plugin_name, $target) {
+  if ('showtext' == $plugin_name) {
+    $text = $target['text'] ? $target['text'] : $target['dest'];
+    return $text;
+  }
+  if ('nowiki' == $plugin_name) {
+    $text = $target['text'] ? $target['text'] : $target['dest'];
+    return '[[' . $text . ']]';
+  }
+  if ('redact' == $plugin_name) {
+    if (user_is_logged_in()) {
+       $text = $target['dest'];
+    }
+    else {
+       $text = $target['text'] ? $target['text'] : '******';
+    }
+    return $text;
+  }
+  $plugin = $freelinking[$plugin_name];
+
+  // if a plugin does not exist, go to failure.
+  if (!$plugin) {
+    return array('error' => t('Plugin %plugin not found',
+             array('%plugin' => $plugin_name)));
+  }
+
+  // run the text through translation
+  if (isset($plugin['translate'])) {
+    $target['dest'] = strtr($target['dest'], $plugin['translate']);
+  }
+
+  // process simple replacement plugins if no callback exists
+  if (isset($plugin['replacement']) && !isset($plugin['callback'])) {
+    // %1 is the token all freelinking replacement strings must include
+    $url = preg_replace('/%1/', $target['dest'], $plugin['replacement']);
+    $link = array('', $url);
+  }
+
+  // process replacement callback
+  if (isset($plugin['callback']) && function_exists($plugin['callback'])) {
+    $link = call_user_func_array($plugin['callback'], array($target, $plugin));
+  }
+
+  // Standardize link, grab authoritative "structured" version
+  // designate the rendered text for display
+  if (is_array($link)) {
+    if (isset($link['failover']) && $link['failover'] != 'error' &&
+        $link['failover'] != 'NONE') {
+      $target = isset($link['target']) ? $link['target'] : $target;
+      $target['other']['trace'][] = $plugin_name;
+      unset($freelinking[$plugin_name]);
+      return _freelinking_build_freelink($freelinking, $link['failover'], $target);
+    }
+    if (is_array($link) && !isset($link['error'])) {
+      $data = array(
+        'target' => $target,
+        'plugin_name' => $plugin_name,
+        'plugin' => $plugin,
+      );
+      drupal_alter('freelink', $link, $data);
+    }
+  }
+  // if empty/false, nothing will happen
+  return $link;
+}
+*/
